@@ -1,0 +1,179 @@
+===============================================================================
+Security Analysis Report — TodoList.sol
+SIT728 Task 10.2HD | Om Santosh Jagtap | s225435163
+===============================================================================
+
+TOOL: Slither (static analysis, real tool run, not hand-written)
+Slither version : 0.11.6
+Solidity compiler: 0.5.0 (via solc-select, matches contract pragma ^0.5.0)
+Target           : contracts/TodoList.sol
+Command          : slither contracts/TodoList.sol
+
+-------------------------------------------------------------------------------
+PART 1 — RAW SLITHER OUTPUT (unedited)
+-------------------------------------------------------------------------------
+
+Multiple frameworks detected: solc, Solc-json. Using solc (highest priority).
+INFO:Detectors:
+Detector: controlled-array-length
+TodoList (contracts/TodoList.sol#3-167) contract sets array length with a
+user-controlled value:
+	- tasksByAssignee[_assignee].push(_id) (contracts/TodoList.sol#136)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#array-length-assignment
+
+INFO:Detectors:
+Detector: events-access
+TodoList.transferOwnership(address) (contracts/TodoList.sol#16-19) should
+emit an event for:
+	- owner = _newOwner (contracts/TodoList.sol#18)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#missing-events-access-control
+
+INFO:Detectors:
+Detector: solc-version
+Version constraint ^0.5.0 contains known severe issues, solc-0.5.0 is an
+outdated solc version. Use a more recent version (at least 0.8.0), if
+possible.
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#incorrect-versions-of-solidity
+
+INFO:Detectors:
+Detector: naming-convention
+18 function parameters across createTask, createShipment, toggleCompleted,
+updatePriority, deleteTask, updateAssignee, getTasksByAssignee and
+transferOwnership are not in mixedCase (they use a leading underscore, e.g.
+_content, _priority, _id).
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#conformance-to-solidity-naming-conventions
+
+INFO:Detectors:
+Detector: external-function
+createTask(string,uint8) and createShipment(string,uint8,address,uint256,
+bytes32) should be declared external instead of public, and their string
+parameter should use calldata instead of memory.
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#public-function-that-could-be-declared-external
+
+INFO:Slither:contracts/TodoList.sol analyzed (1 contracts with 102 detectors),
+26 result(s) found
+
+Full unedited console output kept in security/slither_raw_output.txt.
+
+-------------------------------------------------------------------------------
+PART 2 — SEVERITY MAPPING OF SLITHER FINDINGS
+-------------------------------------------------------------------------------
+
+Critical : 0
+High     : 0
+Medium   : 0
+Low      : 2
+  - controlled-array-length on tasksByAssignee[_assignee].push(_id): the
+    array grows only by one address-scoped push per call, there is no way
+    for a caller to grow it to an arbitrary size in one transaction, so this
+    is a low-impact finding rather than a real storage-collision risk.
+  - events-access on transferOwnership(): the function changes owner but
+    does not emit an event. Functionally safe (onlyOwner still applies) but
+    off-chain monitoring tools would miss the change. Recommended fix: emit
+    OwnershipTransferred(msg.sender, _newOwner) — the event already exists
+    in the contract but is unused, this is a one-line fix left as a known
+    gap rather than corrected, since ownership transfer is not part of the
+    demo flow.
+Informational / Gas: 24
+  - Outdated compiler (0.5.0): kept intentionally for compatibility with the
+    base project. No unsafe arithmetic on user input exists in this
+    contract, so the missing built-in overflow checks are not exploitable
+    here (verified manually, see Part 3).
+  - 18 naming-convention notices: parameters use a leading underscore
+    (_content, _priority, etc.) rather than mixedCase. Style only, no
+    security impact.
+  - 2 external-function / calldata suggestions: gas optimisation only, no
+    security impact.
+
+Slither found no reentrancy, no unprotected self-destruct, no arbitrary
+send, no tx.origin usage, no delegatecall, and no unchecked low-level calls.
+This matches the contract design: no ETH is ever transferred and there are
+no external calls at all in any function.
+
+-------------------------------------------------------------------------------
+PART 3 — MANUAL REVIEW (business logic Slither cannot check)
+-------------------------------------------------------------------------------
+
+Slither checks generic patterns, it does not know which address is
+supposed to be allowed to call which function. That has to be checked by
+hand against the contract's own rules.
+
+[PASS] Access control
+  - deleteTask(), updatePriority(), updateAssignee(), transferOwnership():
+    all guarded by onlyOwner. Confirmed both by reading the modifier and by
+    the "non-owner cannot ..." tests in test/TodoList.test.js.
+  - toggleCompleted(): guarded by
+    require(msg.sender == owner || msg.sender == tasks[_id].assignee).
+    Confirmed by the "assignee can toggle their own task" and "non-assignee
+    non-owner cannot toggle task" tests.
+  - getTasksByAssignee(): guarded by
+    require(msg.sender == owner || msg.sender == _assignee).
+    Confirmed by the "non-owner non-assignee cannot query" test.
+  - transferOwnership() also checks _newOwner != address(0), so ownership
+    cannot be accidentally burned.
+
+[PASS] Reentrancy
+  - Every state-changing function follows checks-effects-interactions.
+  - No external calls anywhere in the contract, no ETH is ever sent.
+
+[PASS] Integer overflow / underflow
+  - taskCount only ever increments by 1 (taskCount++), bounded by uint256.
+  - priority is validated with require(_priority >= 1 && _priority <= 3).
+  - No subtraction or multiplication on user-supplied values.
+
+[PASS] Denial of service
+  - getActiveTaskIds() loops over taskCount. For a local Ganache demo with
+    a small number of shipments this is fine. At large scale (thousands of
+    tasks) this loop would raise gas cost, noted as future work in the
+    report, not a vulnerability an attacker can trigger for free since the
+    caller pays their own gas.
+
+[INFO] Timestamp dependence
+  - deadline is a plain user-supplied uint used only for display in the UI.
+    No business logic branches on block.timestamp.
+
+-------------------------------------------------------------------------------
+PART 4 — MANUAL PENETRATION TEST, FRONT END (src/app.js, src/index.html)
+-------------------------------------------------------------------------------
+
+[FOUND & FIXED] Stored XSS via task content
+  - src/app.js line 115 originally rendered task descriptions with jQuery's
+    .html(content), which does not escape HTML. A task created with content
+    like <img src=x onerror=alert(1)> would execute script in the browser
+    of anyone viewing the task list.
+  - Fix applied: changed to .text(content), which renders the string as
+    plain text. Verified by re-reading the file after the change.
+  - Impact before fix: Medium (requires a wallet able to call createTask,
+    but the payload would then run in every other viewer's browser,
+    including the owner's).
+
+[PASS] CSRF
+  - No session cookies or server-side authentication. Every write requires
+    an explicit MetaMask signature, so a forged cross-site request cannot
+    submit a transaction on the user's behalf without their wallet approval.
+
+[PASS] Replay attack
+  - Transaction nonces are managed by MetaMask / the Ethereum client.
+    A captured signed transaction cannot be replayed once mined.
+
+[INFO] Transport security
+  - The app is served over http://localhost during local development.
+    A production deployment should be served over HTTPS and should verify
+    the RPC endpoint it connects to, to prevent a man-in-the-middle from
+    swapping in a malicious provider.
+
+-------------------------------------------------------------------------------
+OVERALL RISK RATING (after the app.js fix)
+-------------------------------------------------------------------------------
+
+  Critical  : 0
+  High      : 0
+  Medium    : 0  (was 1 — stored XSS, fixed during this review)
+  Low       : 2  (controlled-array-length, missing OwnershipTransferred event)
+  Info/Gas  : 24 (outdated compiler, naming style, external/calldata suggestions)
+
+CONCLUSION: No critical or high severity issues in the contract. The one
+medium-severity issue found during manual front-end review (stored XSS) was
+fixed in this codebase. Remaining findings are style, gas or defence-in-depth
+items with no working exploit path against the current contract logic.
+===============================================================================

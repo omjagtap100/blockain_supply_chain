@@ -1,0 +1,70 @@
+Multiple frameworks detected: solc, Solc-json. Using solc (highest priority). Use --compile-force-framework to override.
+'solc --version' running
+'solc contracts/TodoList.sol --combined-json abi,ast,bin,bin-runtime,srcmap,srcmap-runtime,userdoc,devdoc,hashes,compact-format --allow-paths .,/home/om/trimester_3/SIT728/resourses/5.2D-resources/5.3P/contracts' running
+INFO:Detectors:
+Detector: controlled-array-length
+TodoList (contracts/TodoList.sol#3-167) contract sets array length with a user-controlled value:
+	- tasksByAssignee[_assignee].push(_id) (contracts/TodoList.sol#136)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#array-length-assignment
+INFO:Detectors:
+Detector: events-access
+TodoList.transferOwnership(address) (contracts/TodoList.sol#16-19) should emit an event for: 
+	- owner = _newOwner (contracts/TodoList.sol#18) 
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#missing-events-access-control
+INFO:Detectors:
+Detector: solc-version
+Version constraint ^0.5.0 contains known severe issues (https://solidity.readthedocs.io/en/latest/bugs.html)
+	- DirtyBytesArrayToStorage
+	- ABIDecodeTwoDimensionalArrayMemory
+	- KeccakCaching
+	- EmptyByteArrayCopy
+	- DynamicArrayCleanup
+	- ImplicitConstructorCallvalueCheck
+	- TupleAssignmentMultiStackSlotComponents
+	- MemoryArrayCreationOverflow
+	- privateCanBeOverridden
+	- SignedArrayStorageCopy
+	- ABIEncoderV2StorageArrayWithMultiSlotElement
+	- DynamicConstructorArgumentsClippedABIV2
+	- UninitializedFunctionPointerInConstructor
+	- IncorrectEventSignatureInLibraries
+	- ABIEncoderV2PackedStorage.
+It is used by:
+	- ^0.5.0 (contracts/TodoList.sol#1)
+solc-0.5.0 is an outdated solc version. Use a more recent version (at least 0.8.0), if possible.
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#incorrect-versions-of-solidity
+INFO:Detectors:
+Detector: naming-convention
+Parameter TodoList.transferOwnership(address)._newOwner (contracts/TodoList.sol#16) is not in mixedCase
+Parameter TodoList.createTask(string,uint8,address,uint256,bytes32)._content (contracts/TodoList.sol#70) is not in mixedCase
+Parameter TodoList.createTask(string,uint8,address,uint256,bytes32)._priority (contracts/TodoList.sol#71) is not in mixedCase
+Parameter TodoList.createTask(string,uint8,address,uint256,bytes32)._assignee (contracts/TodoList.sol#72) is not in mixedCase
+Parameter TodoList.createTask(string,uint8,address,uint256,bytes32)._deadline (contracts/TodoList.sol#73) is not in mixedCase
+Parameter TodoList.createTask(string,uint8,address,uint256,bytes32)._contentHash (contracts/TodoList.sol#74) is not in mixedCase
+Parameter TodoList.createTask(string,uint8)._content (contracts/TodoList.sol#94) is not in mixedCase
+Parameter TodoList.createTask(string,uint8)._priority (contracts/TodoList.sol#94) is not in mixedCase
+Parameter TodoList.createShipment(string,uint8,address,uint256,bytes32)._content (contracts/TodoList.sol#99) is not in mixedCase
+Parameter TodoList.createShipment(string,uint8,address,uint256,bytes32)._priority (contracts/TodoList.sol#100) is not in mixedCase
+Parameter TodoList.createShipment(string,uint8,address,uint256,bytes32)._assignee (contracts/TodoList.sol#101) is not in mixedCase
+Parameter TodoList.createShipment(string,uint8,address,uint256,bytes32)._deadline (contracts/TodoList.sol#102) is not in mixedCase
+Parameter TodoList.createShipment(string,uint8,address,uint256,bytes32)._contentHash (contracts/TodoList.sol#103) is not in mixedCase
+Parameter TodoList.toggleCompleted(uint256)._id (contracts/TodoList.sol#108) is not in mixedCase
+Parameter TodoList.updatePriority(uint256,uint8)._id (contracts/TodoList.sol#120) is not in mixedCase
+Parameter TodoList.updatePriority(uint256,uint8)._priority (contracts/TodoList.sol#120) is not in mixedCase
+Parameter TodoList.deleteTask(uint256)._id (contracts/TodoList.sol#127) is not in mixedCase
+Parameter TodoList.updateAssignee(uint256,address)._id (contracts/TodoList.sol#133) is not in mixedCase
+Parameter TodoList.updateAssignee(uint256,address)._assignee (contracts/TodoList.sol#133) is not in mixedCase
+Parameter TodoList.getTasksByAssignee(address)._assignee (contracts/TodoList.sol#140) is not in mixedCase
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#conformance-to-solidity-naming-conventions
+INFO:Detectors:
+Detector: external-function
+createTask(string,uint8) should be declared external:
+	- TodoList.createTask(string,uint8) (contracts/TodoList.sol#94-96)
+Moreover, the following function parameters should change its data location:
+_content location should be calldata
+createShipment(string,uint8,address,uint256,bytes32) should be declared external:
+	- TodoList.createShipment(string,uint8,address,uint256,bytes32) (contracts/TodoList.sol#98-106)
+Moreover, the following function parameters should change its data location:
+_content location should be calldata
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#public-function-that-could-be-declared-external
+INFO:Slither:contracts/TodoList.sol analyzed (1 contracts with 102 detectors), 26 result(s) found
